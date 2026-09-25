@@ -1,0 +1,31 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: Install on ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: pinact
+        uses: ./
+      - name: The installed pinact is the one asked for
+        env:
+          EXPECTED: ${{ steps.pinact.outputs.version }}
+        run: |
+          set -euo pipefail
+          pinact --version
+          pinact --version | grep -qF "$EXPECTED"
+      - name: Nothing was left in the checkout
+        run: test -z "$(git status --porcelain)"

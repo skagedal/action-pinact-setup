@@ -1,0 +1,52 @@
+name: Set up pinact
+description: >-
+  Install a pinned release of pinact, checked against the checksums published
+  with it, and put it on PATH.
+author: Simon Kågedal Reimer
+
+inputs:
+  version:
+    description: The pinact version to install, without the leading v.
+    required: false
+    default: "5.0.0"
+
+outputs:
+  version:
+    description: The pinact version that was installed.
+    value: ${{ inputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install pinact
+      shell: bash
+      env:
+        PINACT_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        case "$(uname -s)-$(uname -m)" in
+            Linux-x86_64)                 asset="pinact_linux_amd64.tar.gz" ;;
+            Linux-aarch64 | Linux-arm64)  asset="pinact_linux_arm64.tar.gz" ;;
+            Darwin-x86_64)                asset="pinact_darwin_amd64.tar.gz" ;;
+            Darwin-arm64)                 asset="pinact_darwin_arm64.tar.gz" ;;
+            *) echo "no pinact build for $(uname -s)-$(uname -m)" >&2; exit 1 ;;
+        esac
+        checksums="pinact_${PINACT_VERSION}_checksums.txt"
+        base="https://github.com/suzuki-shunsuke/pinact/releases/download/v${PINACT_VERSION}"
+        # In a temporary directory, not the working directory: that is usually
+        # the caller's checkout, and anything left in it could end up committed.
+        cd "$(mktemp -d)"
+        curl -fsSL -O "$base/$asset" -O "$base/$checksums"
+        # Protects against a corrupted or swapped download, not against a
+        # compromised release: the checksums come from the same place.
+        shasum -a 256 --ignore-missing -c "$checksums"
+        tar xzf "$asset" pinact
+        bin_dir="$RUNNER_TEMP/pinact-$PINACT_VERSION/bin"
+        mkdir -p "$bin_dir"
+        install -m 0755 pinact "$bin_dir/pinact"
+        echo "$bin_dir" >> "$GITHUB_PATH"
+        "$bin_dir/pinact" --version
+
+branding:
+  icon: lock
+  color: gray-dark
