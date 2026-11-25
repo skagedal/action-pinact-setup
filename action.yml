@@ -2,7 +2,7 @@ name: Set up pinact
 description: >-
   Install a pinned release of pinact, checked against the checksums published
   with it, and put it on PATH.
-author: Simon Kågedal Reimer
+author: Simon Kågedal
 
 inputs:
   version:
